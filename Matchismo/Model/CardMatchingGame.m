@@ -32,7 +32,7 @@
 }
 
 - (instancetype)initWithCardCount:(NSUInteger)count usingDeck:(Deck *)deck {
-    self = [self init];
+    self = [super init];
     if (self) {
         for (int i = 0; i < count; i++) {
             Card *card = [deck drawRandomCard];
@@ -54,30 +54,33 @@
 
 - (void)chooseCardAtIndex:(NSUInteger)index {
     Card *card = [self.cards objectAtIndex:index];
-    if (card) {
-        if (!card.isMatched) {
-            if (card.isChosen) {
-                card.chosen = NO;
+    if (card && !card.isMatched) {
+        if (card.isChosen) {
+            card.chosen = NO;
+        } else {
+            NSMutableArray *otherCards = [NSMutableArray array];
+            for (Card *otherCard in self.cards) {
+                if (otherCard.isChosen && !otherCard.isMatched) {
+                    [otherCards addObject:otherCard];
+                }
             }
-            else {
-                for (Card *otherCard in self.cards) {
-                    if (otherCard.isChosen && !otherCard.isMatched) {
-                        int matchScore = [card match:@[otherCard]];
-                        if (matchScore) {
-                            self.score += matchScore * MATCH_BONUS;
-                            card.matched = YES;
-                            otherCard.matched = YES;
-                        }
-                        else {
-                            self.score -= MISMATCH_PENALTY;
-                            otherCard.chosen = NO;
-                        }
-                        break;
+            if ([otherCards count] + 1 == self.maxMatchingCards) {
+                int matchScore = [card match:otherCards];
+                if (matchScore) {
+                    self.score += matchScore * MATCH_BONUS;
+                    card.matched = YES;
+                    for (Card *otherCard in otherCards) {
+                        otherCard.matched = YES;
+                    }
+                } else {
+                    self.score -= MISMATCH_PENALTY;
+                    for (Card* otherCard in otherCards) {
+                        otherCard.chosen = NO;
                     }
                 }
-                card.chosen = YES;
-                self.score -= COST_TO_CHOOSE;
             }
+            card.chosen = YES;
+            self.score -= COST_TO_CHOOSE;
         }
     }
 }
